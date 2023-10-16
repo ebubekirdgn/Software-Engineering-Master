@@ -7,7 +7,10 @@
 #GEO ; verileri çekmek içim  BiocManager::(install) kütüphanesi kurulmalıdır.
   
 library(GEOquery)
-bladder_cancer = getGEO("GDS183")
+bladder_cancer=getGEO("GSE200146")
 
 #GetGEO ; fonksiyonu söz konusu veri kümesini bilgisayarda gecici olarak bir alana yerleştirmekte ve aynı 
 # zamanda bladder_cancer isimli bir değişken oluşturulmasına imkan sağlamaktadır.
+
+contents=bladder_cancer[[1]]
+show(contents)
