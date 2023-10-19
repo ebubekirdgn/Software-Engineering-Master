@@ -12,8 +12,11 @@ bladder_cancer=getGEO("GDS183")
 #GetGEO ; fonksiyonu söz konusu veri kümesini bilgisayarda gecici olarak bir alana yerleştirmekte ve aynı 
 # zamanda bladder_cancer isimli bir değişken oluşturulmasına imkan sağlamaktadır.
 
-#contents=bladder_cancer[[1]]
-#show(contents)
+eset= GDS2eSet(bladder_cancer,do.log2 = TRUE)
 
+eset
+dim(eset)
 
-eset= GDS2eSet(bladder_cancer,do,log2 = TRUE)
+data = exprs(eset)
+
+data[1:5,1:5]
