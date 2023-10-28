@@ -54,11 +54,5 @@ if (!require("BiocManager", quietly = TRUE))
 BiocManager::install(version='devel') 
 BiocManager::install("genefilter")
 
-
-BiocManager::install(c("GenomicFeatures", "AnnotationDbi"))
-
-if (!require("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-
-BiocManager::install("BiocGenerics")
-  
+install.packages('ggplot2')
+install.packages("BiocManager")
