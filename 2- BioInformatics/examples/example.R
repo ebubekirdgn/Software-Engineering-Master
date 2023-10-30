@@ -1,7 +1,7 @@
 library(GEOquery)
 gse <- getGEO('GSE30272',GSEMatrix=TRUE)
 gse
-class(gse)
+class(gse) #list
 
 #Buradan bireylere ait metadata, gen ekspresyon matrisi, ve gen-probeset eslesmesini
 #bulabilecegimiz bir feature verisi olusturalim:
@@ -112,3 +112,84 @@ head(genemap)
 
 #Genmap'in yedeğini alıyoruz.
 expr_yedek = expr
+
+
+#Simdi ilk olarak bir probeset ID birden fazla genle eslesiyor mu buna bakmaliyiz,
+#bunlar veri duplikasyonu yaratacagindan istatistiksel test yapmamizi zorlastirir
+#bunlari veriden cikararak baslayacagiz:
+
+any(duplicated(names(genemap)))
+
+
+sort(table(genemap),dec=T)[1:10]
+
+
+rownames(expr) = genemap[rownames(expr)]
+
+expr[1:5,1:5]
+
+sort(table(rownames(expr)), dec = T)[1:10]
+
+
+x = setNames(c(1:5), c('bir','iki','iki','dort','bes'))
+x['iki']
+#oysa 3 degerine sahip olan elemanin adi da ‘iki’. Bu tarz tekrarli durumlarda
+#otomatik olarak ilk eleman verilir.
+
+'elma' %in% c('elma','armut')
+# TRUE değeri döner
+
+#Ilk olarak gen ismi olarak '##noname## ve '' gorunen satirlari veriden cikartarak
+#baslamaliyiz:
+expr = expr[!rownames(expr) %in% c('##noname##',''),]
+sort(table(rownames(expr)),dec=T)[1:10]
+
+#Simdi tekrar eden genleri ozetlemeye geri donelim.
+expr[rownames(expr) %in% 'VIM', 1:5]
+
+vimmeans = colMeans(expr[rownames(expr) %in% 'VIM', ])
+head(vimmeans)
+
+
+#her degerin sadece bir kere tekrar edilmesini unique() fonksiyonu ile saglayacagiz.
+genisimleri = unique(rownames(expr))
+nrow(expr)
+
+length(genisimleri)
+
+
+#IF FONKSIYONU 
+
+vektorum = c('elma','muz','armut')
+if('cilek'%in%vektorum){
+  print('cilek var!')
+} else if('elma' %in% vektorum){
+  print('elma var!')
+} else{
+  print('ne cilek ne elma var :(')
+}
+
+# SAPPLY FONKSIYONU 
+sapply(c(1:10),function(i){
+  i * 2
+})
+
+sapply(c(1:10),function(i){
+  i * (i-1)
+})
+
+
+genexpr = sapply(genisimleri, function(gen) {
+  i = rownames(expr)%in%gen
+  if(sum(i)>1){
+    colMeans(expr[i,])
+  } else if(sum(i)==1){
+    expr[i,]
+  }
+})
+genexpr[1:5,1:5] 
+#satir-sutun yer degistirmis durumda. bunu yine transpoze ederek duzeltebiliriz:
+genexpr = t(genexpr)
+genexpr[1:5,1:5]
+
+dim(genexpr)
