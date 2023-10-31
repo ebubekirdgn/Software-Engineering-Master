@@ -12,15 +12,7 @@ common_gene <- intersect(rownames(gen1),rownames(gen2))
 common_data_gse1 <- gen1[common_gene,]
 common_data_gse2 <- gen2[common_gene,]
 
-
-common_gene[[1]]
-
-
 # İki veri setini birleştirin
 merged_data <- merge(common_data_gse1, common_data_gse2)
 
 dim(merged_data)
-
-
-
-
