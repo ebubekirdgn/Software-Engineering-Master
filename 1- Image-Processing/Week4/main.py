@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 
 img_path="./images/x.png"
 
-img = cv2.imread(img_path,0)
+img = cv2.imread(img_path,0)  # resmi siyah beyazz yaptık burada 2 boyuta düşürdük
 
 def log_trans(r,c):
     #resimi floata çeviriyoruz... 255'e  ekleyince devam eder. 0 olmaz
     r = r.astype(np.float64)
     s = c * np.log(1+r)
-    s=image_scale(s)
+    #s=image_scale(s)
     return s
 
 
@@ -23,17 +23,17 @@ def image_scale(image):
 
 # deneme = np.array([1,25,64,125,196,254,255], dtype = np.uint8)
 # deneme = deneme.astype(np.float64)
-# # deneme +=1
-# # print(deneme)
+# deneme +=1
+# print(deneme)
 
 # d = log_trans(deneme,c =1)
 # print(d)
 
 # d = d - np.min(d)
-# print(d)
+# print("min ->>>>>>", d)
 
 # d = d / np.max(d)
-# print(d)
+# print("max ->>>>>>",d)
 
 # d = d * 255 
 
@@ -41,7 +41,7 @@ def image_scale(image):
 
 # d  = d.astype(np.uint8)
 
-# print(d)
+# print("sonuc bu ",d)
 
 log_image = log_trans(img,c=1)  
 print(np.min(log_image))
