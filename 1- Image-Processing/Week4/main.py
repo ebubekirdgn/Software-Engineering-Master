@@ -9,7 +9,9 @@ img = cv2.imread(img_path,0)  # resmi siyah beyazz yaptık burada 2 boyuta düş
 def log_trans(r,c):
     #resimi floata çeviriyoruz... 255'e  ekleyince devam eder. 0 olmaz
     r = r.astype(np.float64)
+    
     s = c * np.log(1+r)
+    print(s)
     #s=image_scale(s)
     return s
 
