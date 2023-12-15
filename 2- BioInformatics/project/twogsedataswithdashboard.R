@@ -58,9 +58,9 @@ server <- function(input, output, session) {
     gse1Data <- getGSE(input$gse1)
     gse2Data <- getGSE(input$gse2)
     
-    # NA değerleri temizle
-    cleanedData1 <- na.omit(gse1Data)
-    cleanedData2 <- na.omit(gse2Data)
+    # NA değerleri temizle (complete.cases kullanılarak)
+    cleanedData1 <- gse1Data[complete.cases(gse1Data), ]
+    cleanedData2 <- gse2Data[complete.cases(gse2Data), ]
     
     # Temizlenmiş veriyi ekranda göster
     output$cleanedTable <- renderTable({
@@ -71,13 +71,15 @@ server <- function(input, output, session) {
   # Birleştirme butonu için tepki
   observeEvent(input$mergeBtn, {
     # Temizlenmiş GSE verilerini al
-    cleanedData1 <- na.omit(getGSE(input$gse1))
-    cleanedData2 <- na.omit(getGSE(input$gse2))
+    cleanedData1 <- getGSE(input$gse1)[complete.cases(getGSE(input$gse1)), ]
+    cleanedData2 <- getGSE(input$gse2)[complete.cases(getGSE(input$gse2)), ]
     
-    # İki veriyi birleştir
-    mergedData <- merge(cleanedData1, cleanedData2, by = "row.names", all = TRUE)
-    rownames(mergedData) <- mergedData$Row.names
-    mergedData <- mergedData[, -1]
+    # İki veriyi birleştir (dplyr paketinden bind_rows kullanarak)
+    mergedData <- dplyr::bind_rows(
+      data.frame(ID = rownames(cleanedData1), cleanedData1),
+      data.frame(ID = rownames(cleanedData2), cleanedData2),
+      .id = "Source"
+    )
     
     # Birleştirilmiş veriyi ekranda göster
     output$mergedTable <- renderTable({
