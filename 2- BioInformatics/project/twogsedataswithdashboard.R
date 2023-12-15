@@ -2,10 +2,12 @@
 if (!require("shiny")) install.packages("shiny")
 if (!require("GEOquery")) install.packages("GEOquery")
 if (!require("shinydashboard")) install.packages("shinydashboard")
+if (!require("plotly")) install.packages("plotly")
 
 library(shiny)
 library(GEOquery)
 library(shinydashboard)
+library(plotly)
 
 # UI oluştur
 ui <- dashboardPage(
@@ -21,7 +23,8 @@ ui <- dashboardPage(
     box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse1Table")),
     box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse2Table")),
     box(title = "Temizlenmiş Veri", width = 6, solidHeader = TRUE, tableOutput("cleanedTable")),
-    box(title = "Birleştirilmiş Veri", width = 6, solidHeader = TRUE, tableOutput("mergedTable"))
+    box(title = "Birleştirilmiş Veri", width = 6, solidHeader = TRUE, tableOutput("mergedTable")),
+    box(title = "Görselleştirme", width = 12, solidHeader = TRUE, plotlyOutput("mergedPlot"))
   )
 )
 
@@ -84,6 +87,11 @@ server <- function(input, output, session) {
     # Birleştirilmiş veriyi ekranda göster
     output$mergedTable <- renderTable({
       head(mergedData)
+    })
+    
+    # Görselleştirme için plotly grafiği oluştur
+    output$mergedPlot <- renderPlotly({
+      plot_ly(data = mergedData, x = ~ID, y = ~`ID`, type = 'scatter', mode = 'lines+markers', color = ~Source)
     })
   })
 }
