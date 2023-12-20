@@ -87,8 +87,13 @@ server <- function(input, output, session) {
     pdata1 <- gse1Data$exprs1@phenoData@data[, selected_column1]
     pdata2 <- gse2Data$exprs1@phenoData@data[, selected_column2]
     
-    mergedPData <- cbind(pdata1, pdata2)
+    # PData1 ve PData2'yi alt alta birleştir
+    mergedPData <- rbind(
+      data.frame(PData = pdata1),
+      data.frame(PData = pdata2)
+    )
     
+    # Birleştirilmiş PData'yı yazdır
     output$mergedPDataTable <- renderDT({
       datatable(mergedPData, options = list(scrollX = TRUE, scrollY = TRUE))
     })
