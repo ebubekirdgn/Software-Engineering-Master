@@ -85,6 +85,11 @@ server <- function(input, output, session) {
     output$PdataTable <- renderDT({
       datatable(as.data.frame(gse1Data$exprs1@phenoData@data[, selected_column1]), options = list(scrollX = TRUE, scrollY = TRUE, pageLength = 10))
     })
+    filtre1 = gse1Data$exprs1@phenoData@data[, selected_column1]
+    output$PdataTable1 <- renderDT({
+      datatable(as.data.frame(gse2Data$exprs1@phenoData@data[, selected_column2]), options = list(scrollX = TRUE, scrollY = TRUE, pageLength = 10))
+    })
+    filtre2 = gse2Data$exprs1@phenoData@data[, selected_column2]
   })
   
   observeEvent(input$pdataMergeBtn, {
