@@ -8,7 +8,7 @@ getGSE <- function(gseNumber) {
   gse <- getGEO(gseNumber, GSEMatrix = TRUE, AnnotGPL = TRUE)
   exprs <- exprs(gse[[1]])
   exprs1 <- (gse[[1]])
-  return(list(exprs = exprs,  exprs1 = exprs1))
+  return(list(exprs = exprs, exprs1 = exprs1))
 }
 
 # UI oluştur
@@ -25,11 +25,11 @@ ui <- dashboardPage(
     actionButton("pdataMergeBtn", "PData Merge")  # PData Merge butonu eklendi
   ),
   dashboardBody(
-    box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse1Table")),
-    box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse2Table")),
+    box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, DTOutput("gse1Table")),
+    box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, DTOutput("gse2Table")),
     box(title = "Pdata veri 1", width = 6, solidHeader = TRUE, DTOutput("PdataTable")),
     box(title = "Pdata veri 2", width = 6, solidHeader = TRUE, DTOutput("PdataTable1")),
-    box(title = "Birleştirilmiş Veri", width = 6, solidHeader = TRUE, tableOutput("mergedTable")),
+    box(title = "Birleştirilmiş Veri", width = 6, solidHeader = TRUE, DTOutput("mergedTable")),
     box(title = "Birleştirilmiş Pdata", width = 6, solidHeader = TRUE, DTOutput("mergedPDataTable")), # Ekran için yeni bir tablo eklendi
     box(title = "Görselleştirme", width = 12, solidHeader = TRUE, plotlyOutput("mergedPlot")),
   )
@@ -46,20 +46,34 @@ server <- function(input, output, session) {
   
   # Veri alma butonu için tepki
   observeEvent(input$submitBtn, {
-    gse1Data <- getGSE(input$gse1)
-    gse2Data <- getGSE(input$gse2)
-    
-    colnames_pdata <- colnames(gse1Data$exprs1@phenoData@data)
-    colnames_pdata1 <- colnames(gse2Data$exprs1@phenoData@data)
-    updateSelectInput(session, "columnSelect1", choices = colnames_pdata)
-    updateSelectInput(session, "columnSelect2", choices = colnames_pdata1)
-    
-    output$gse1Table <- renderTable({
-      head(gse1Data$exprs)
-    })
-    
-    output$gse2Table <- renderTable({
-      head(gse2Data$exprs)
+    tryCatch({
+      gse1Data <- getGSE(input$gse1)
+      gse2Data <- getGSE(input$gse2)
+      
+      colnames_pdata <- colnames(gse1Data$exprs1@phenoData@data)
+      colnames_pdata1 <- colnames(gse2Data$exprs1@phenoData@data)
+      updateSelectInput(session, "columnSelect1", choices = colnames_pdata)
+      updateSelectInput(session, "columnSelect2", choices = colnames_pdata1)
+      
+      output$gse1Table <- renderDT({
+        datatable(head(gse1Data$exprs), options = list(pageLength = 10))
+      })
+      
+      output$gse2Table <- renderDT({
+        datatable(head(gse2Data$exprs), options = list(pageLength = 10))
+      })
+    }, error = function(e) {
+      showModal(
+        modalDialog(
+          title = "Hata",
+          "Veri alma sırasında bir hata oluştu. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.",
+          easyClose = TRUE,
+          footer = NULL
+        )
+      )
+      shinyjs::reset("errorButton")
+      shinyjs::enable("errorButton")
+      shinyjs::runjs('Shiny.onInputChange("error", true);')
     })
   })
   
@@ -69,13 +83,8 @@ server <- function(input, output, session) {
     selected_column1 <- input$columnSelect1
     selected_column2 <- input$columnSelect2
     output$PdataTable <- renderDT({
-      datatable(as.data.frame(gse1Data$exprs1@phenoData@data[, selected_column1]), options = list(scrollX = TRUE, scrollY = TRUE))
+      datatable(as.data.frame(gse1Data$exprs1@phenoData@data[, selected_column1]), options = list(scrollX = TRUE, scrollY = TRUE, pageLength = 10))
     })
-    filtre1 = gse1Data$exprs1@phenoData@data[, selected_column1]
-    output$PdataTable1 <- renderDT({
-      datatable(as.data.frame(gse2Data$exprs1@phenoData@data[, selected_column2]), options = list(scrollX = TRUE, scrollY = TRUE))
-    })
-    filtre2 = gse2Data$exprs1@phenoData@data[, selected_column2]
   })
   
   observeEvent(input$pdataMergeBtn, {
@@ -95,7 +104,7 @@ server <- function(input, output, session) {
     
     # Birleştirilmiş PData'yı yazdır
     output$mergedPDataTable <- renderDT({
-      datatable(mergedPData, options = list(scrollX = TRUE, scrollY = TRUE))
+      datatable(mergedPData, options = list(scrollX = TRUE, scrollY = TRUE, pageLength = 10))
     })
   })
   
@@ -109,13 +118,33 @@ server <- function(input, output, session) {
       .id = "Source"
     )
     
-    output$mergedTable <- renderTable({
-      head(mergedData)
+    output$mergedTable <- renderDT({
+      datatable(head(mergedData), options = list(pageLength = 10))
     })
     
     output$mergedPlot <- renderPlotly({
       plot_ly(data = mergedData, x = ~ID, y = ~`ID`, type = 'scatter', mode = 'lines+markers', color = ~Source)
     })
+  })
+  
+  observe({
+    shinyjs::enable("errorButton")
+  })
+  
+  observeEvent(input$error, {
+    if (input$error) {
+      showModal(
+        modalDialog(
+          title = "Hata",
+          "Veri alma sırasında bir hata oluştu. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.",
+          easyClose = TRUE,
+          footer = NULL
+        )
+      )
+      shinyjs::reset("errorButton")
+      shinyjs::enable("errorButton")
+      shinyjs::runjs('Shiny.onInputChange("error", false);')
+    }
   })
 }
 
