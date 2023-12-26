@@ -24,14 +24,15 @@ getGSE <- function(gseNumber) {
 ui <- dashboardPage(
   dashboardHeader(title = "GSE Veri İşleme"),
   dashboardSidebar(
-    textInput("gse1", "İlk GSE Veri Numarası:", value = "GSE1010"),
-    textInput("gse2", "İkinci GSE Veri Numarası:", value = "GSE1009"),
+    textInput("gse1", "İlk GSE Veri Numarası:", value = "GSE19804"),
+    textInput("gse2", "İkinci GSE Veri Numarası:", value = "GSE19804"),
     selectInput("columnSelect1", "Sütun Seç 1:", choices = NULL),
     selectInput("columnSelect2", "Sütun Seç 2:", choices = NULL),
     actionButton("submitBtn", "Verileri Getir"),
     actionButton("StunBtn", "Pdata Getir"),
     actionButton("cleanNABtn", "Clean NA Data"),
     actionButton("mergeBtn", "Merge Cleaned Data"),
+    selectInput("filterType", "Filtre Türü:", c("nsFilter", "varFilter")),  # Yeni eklenen Filtre Türü seçimi
     actionButton("filterBtn", "Filtrele")  # Yeni eklenen Filtrele butonu
   ),
   dashboardBody(
@@ -83,42 +84,54 @@ server <- function(input, output, session) {
     gse1Data <- getGSEData()$gse1Data
     gse2Data <- getGSEData()$gse2Data
     
-    # GSE verilerini nsFilter işlemine tabi tut
+    # GSE verilerini uygun filtreleme işlemine tabi tut
+    selectedFilter <- input$filterType
     eset1 <- gse1Data$exprs1
-    annotation(eset1) <- "hgu133plus2.db"
-    filtrelenmis1 <- nsFilter(
-      eset1,
-      require.entrez = TRUE,
-      require.GOBP = FALSE,
-      require.GOCC = FALSE,
-      require.GOMF = FALSE,
-      require.CytoBand = FALSE,
-      remove.dupEntrez = TRUE,
-      var.func = IQR,
-      var.cutoff = 0.90,
-      var.filter = TRUE,
-      filterByQuantile = TRUE,
-      feature.exclude = "^AFFX"
-    )
-    sonveri1 <- data.frame(t(exprs(filtrelenmis1$eset)))
-    
     eset2 <- gse2Data$exprs1
-    annotation(eset2) <- "hgu133plus2.db"
-    filtrelenmis2 <- nsFilter(
-      eset2,
-      require.entrez = TRUE,
-      require.GOBP = FALSE,
-      require.GOCC = FALSE,
-      require.GOMF = FALSE,
-      require.CytoBand = FALSE,
-      remove.dupEntrez = TRUE,
-      var.func = IQR,
-      var.cutoff = 0.90,
-      var.filter = TRUE,
-      filterByQuantile = TRUE,
-      feature.exclude = "^AFFX"
-    )
-    sonveri2 <- data.frame(t(exprs(filtrelenmis2$eset)))
+    
+    if (selectedFilter == "nsFilter") {
+      annotation(eset1) <- "hgu133plus2.db"
+      filtrelenmis1 <- nsFilter(
+        eset1,
+        require.entrez = TRUE,
+        require.GOBP = FALSE,
+        require.GOCC = FALSE,
+        require.GOMF = FALSE,
+        require.CytoBand = FALSE,
+        remove.dupEntrez = TRUE,
+        var.func = IQR,
+        var.cutoff = 0.90,
+        var.filter = TRUE,
+        filterByQuantile = TRUE,
+        feature.exclude = "^AFFX"
+      )
+      sonveri1 <- data.frame(t(exprs(filtrelenmis1$eset)))
+      
+      annotation(eset2) <- "hgu133plus2.db"
+      filtrelenmis2 <- nsFilter(
+        eset2,
+        require.entrez = TRUE,
+        require.GOBP = FALSE,
+        require.GOCC = FALSE,
+        require.GOMF = FALSE,
+        require.CytoBand = FALSE,
+        remove.dupEntrez = TRUE,
+        var.func = IQR,
+        var.cutoff = 0.90,
+        var.filter = TRUE,
+        filterByQuantile = TRUE,
+        feature.exclude = "^AFFX"
+      )
+      sonveri2 <- data.frame(t(exprs(filtrelenmis2$eset)))
+    } else if (selectedFilter == "varFilter") {
+      eset1 <- exprs(eset1)
+      filtrelenmis1 <- varFilter(eset1,var.cutoff = 0.95)
+      sonveri1 <- data.frame(filtrelenmis1)
+      
+      eset2 <- exprs(eset2)
+      filtrelenmis2 <- varFilter(eset2,var.cutoff = 0.95)
+      sonveri2 <- data.frame(filtrelenmis2)
+    }
     
     # Filtrelenmiş GSE verilerini ekranda göster
     output$filteredGSE1Table <- renderDT({
@@ -129,8 +142,6 @@ server <- function(input, output, session) {
       datatable(sonveri2, options = list(scrollX = TRUE, scrollY = TRUE))
     })
   })
-  
-  # ... (Diğer kod parçacıkları)
 }
 
 # Uygulamayı çalıştır
