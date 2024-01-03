@@ -32,12 +32,13 @@ ui <- dashboardPage(
     selectInput("columnSelect2", "Sütun Seç 2:", choices = NULL),
     actionButton("submitBtn", "Verileri Getir"),
     actionButton("mergeBtn", "Birleştir"),
-    actionButton("excelBtn", "Excele Aktar")  # Excele Aktar butonu eklendi
+    actionButton("excelBtn", "Excele Aktar"),  # Excele Aktar butonu eklendi
+    actionButton("importExcelBtn", "Excel İçe Aktar")  # Excel İçe Aktar butonu eklendi
   ),
   dashboardBody(
     box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse1Table")),
     box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse2Table")),
-    box(title = "Birleştirilmiş Veri", width = 12, solidHeader = TRUE, tableOutput("mergedTable")),
+    box(title = "Birleştirilmiş Veri", width = 12, solidHeader = TRUE, DTOutput("mergedTable"))
   )
 )
 
@@ -74,11 +75,17 @@ server <- function(input, output, session) {
     output$gse2Table <- renderTable({
       head(gse2Data$exprs)  # Veri çerçevesini direkt göster
     })
+    
+    # values içindeki gse1Data ve gse2Data'yi güncelle
+    values$gse1Data <- gse1Data
+    values$gse2Data <- gse2Data
   })
   
+  # Birleştirme butonu için tepki
   observeEvent(input$mergeBtn, {
-    gse1Data <- getGSEData()$gse1Data
-    gse2Data <- getGSEData()$gse2Data
+    # Gerekli verilere ulaş
+    gse1Data <- values$gse1Data
+    gse2Data <- values$gse2Data
     
     gen1 <- gse1Data$exprs
     gen2 <- gse2Data$exprs
@@ -102,12 +109,13 @@ server <- function(input, output, session) {
     df1 <- data.frame(durum_gse1)
     df2 <- data.frame(durum_gse2)
     
-    # Birleştirilmiş veri çerçevesini oluştur
+    # Birleştirilmiş veri çerçevesini güncelle
     values$merged_df <- cbind(df1, df2)
     
     # Ekrana yazdır
-    output$mergedTable <- renderTable({
-      head(values$merged_df)
+    output$mergedTable <- renderDT({
+      datatable(head(values$merged_df), 
+                options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
     })
     
   })
@@ -118,6 +126,18 @@ server <- function(input, output, session) {
     if (!is.null(values$merged_df)) {
       write.xlsx(values$merged_df, file = "veri_cercevesi.xlsx")
     }
+  })
+  
+  # Excel İçe Aktar butonu için tepki
+  observeEvent(input$importExcelBtn, {
+    # Önceki Excele Aktar işlemi sonucu oluşan dosyayı oku
+    birlestirilmis_durum <- read.xlsx("veri_cercevesi.xlsx")
+    
+    # Ekrana yazdır
+    output$mergedTable <- renderDT({
+      datatable(birlestirilmis_durum, 
+                options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
+    })
   })
 }
 
