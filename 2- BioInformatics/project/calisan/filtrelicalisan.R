@@ -4,6 +4,7 @@ if (!require("GEOquery")) install.packages("GEOquery")
 if (!require("shinydashboard")) install.packages("shinydashboard")
 if (!require("plotly")) install.packages("plotly")
 if (!require("DT")) install.packages("DT")
+if (!require("openxlsx")) install.packages("openxlsx")
 
 library(shiny)
 library(GEOquery)
@@ -11,6 +12,7 @@ library(shinydashboard)
 library(plotly)
 library(DT)
 library(genefilter)
+library(openxlsx)
 
 getGSE <- function(gseNumber) {
   gse <- getGEO(gseNumber, GSEMatrix = TRUE, AnnotGPL = TRUE)
@@ -30,34 +32,27 @@ ui <- dashboardPage(
     selectInput("columnSelect2", "Sütun Seç 2:", choices = NULL),
     actionButton("submitBtn", "Verileri Getir"),
     actionButton("mergeBtn", "Birleştir"),
-    #actionButton("StunBtn", "Pdata Getir"),
-    #actionButton("cleanNABtn", "Clean NA Data"),
-    #actionButton("mergeBtn", "Merge Cleaned Data"),
-    actionButton("filterBtn", "Filtrele")  # Yeni eklenen Filtrele butonu
+    actionButton("excelBtn", "Excele Aktar")  # Excele Aktar butonu eklendi
   ),
   dashboardBody(
     box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse1Table")),
     box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse2Table")),
-    #box(title = "Temizlenmiş Veri", width = 6, solidHeader = TRUE, tableOutput("cleanedTable")),
-    #box(title = "Pdata veri", width = 6, solidHeader = TRUE, DTOutput("PdataTable")),
-    #box(title = "Pdata veri", width = 6, solidHeader = TRUE, DTOutput("PdataTable1")),
     box(title = "Birleştirilmiş Veri", width = 12, solidHeader = TRUE, tableOutput("mergedTable")),
-    #box(title = "Görselleştirme", width = 12, solidHeader = TRUE, plotlyOutput("mergedPlot")),
-    #box(title = "Filtre GSE1", width = 6, solidHeader = TRUE, DTOutput("filteredGSE1Table")),  # Yeni eklenen Filtre GSE1 tablosu
-    #box(title = "Filtre GSE2", width = 6, solidHeader = TRUE, DTOutput("filteredGSE2Table"))   # Yeni eklenen Filtre GSE2 tablosu
   )
 )
 
 # Server oluştur
 server <- function(input, output, session) {
+  
+  values <- reactiveValues(
+    merged_df = NULL
+  )
   # GSE verilerini alma fonksiyonu
   getGSEData <- reactive({
     gse1Data <- getGSE(input$gse1)
     gse2Data <- getGSE(input$gse2)
     return(list(gse1Data = gse1Data, gse2Data = gse2Data))
   })
-  
- 
   
   # Veri alma butonu için tepki
   observeEvent(input$submitBtn, {
@@ -101,72 +96,29 @@ server <- function(input, output, session) {
     
     # Sınıf etiketlerini al
     durum_gse1 <- factor(pData(gse1Data$exprs1)[, selected_column_gse1])
-    durum_gse2 <- factor(pData(gse1Data$exprs1)[, selected_column_gse2])
-
+    durum_gse2 <- factor(pData(gse2Data$exprs1)[, selected_column_gse2])
+    
     # Faktörleri içeren iki veri çerçevesi oluştur
     df1 <- data.frame(durum_gse1)
     df2 <- data.frame(durum_gse2)
     
     # Birleştirilmiş veri çerçevesini oluştur
-    merged_df <- cbind(df1, df2)
+    values$merged_df <- cbind(df1, df2)
     
     # Ekrana yazdır
-    print(merged_df)
-    
-  })
-  # Filtrele butonu için tepki
-  observeEvent(input$filterBtn, {
-    gse1Data <- getGSEData()$gse1Data
-    gse2Data <- getGSEData()$gse2Data
-    
-    # GSE verilerini nsFilter işlemine tabi tut
-    eset1 <- gse1Data$exprs1
-    annotation(eset1) <- "hgu133plus2.db"
-    filtrelenmis1 <- nsFilter(
-      eset1,
-      require.entrez = TRUE,
-      require.GOBP = FALSE,
-      require.GOCC = FALSE,
-      require.GOMF = FALSE,
-      require.CytoBand = FALSE,
-      remove.dupEntrez = TRUE,
-      var.func = IQR,
-      var.cutoff = 0.90,
-      var.filter = TRUE,
-      filterByQuantile = TRUE,
-      feature.exclude = "^AFFX"
-    )
-    sonveri1 <- data.frame(t(exprs(filtrelenmis1$eset)))
-    
-    eset2 <- gse2Data$exprs1
-    annotation(eset2) <- "hgu133plus2.db"
-    filtrelenmis2 <- nsFilter(
-      eset2,
-      require.entrez = TRUE,
-      require.GOBP = FALSE,
-      require.GOCC = FALSE,
-      require.GOMF = FALSE,
-      require.CytoBand = FALSE,
-      remove.dupEntrez = TRUE,
-      var.func = IQR,
-      var.cutoff = 0.90,
-      var.filter = TRUE,
-      filterByQuantile = TRUE,
-      feature.exclude = "^AFFX"
-    )
-    sonveri2 <- data.frame(t(exprs(filtrelenmis2$eset)))
-    
-    # Filtrelenmiş GSE verilerini ekranda göster
-    output$filteredGSE1Table <- renderDT({
-      datatable(sonveri1, options = list(scrollX = TRUE, scrollY = TRUE))
+    output$mergedTable <- renderTable({
+      head(values$merged_df)
     })
     
-    output$filteredGSE2Table <- renderDT({
-      datatable(sonveri2, options = list(scrollX = TRUE, scrollY = TRUE))
-    })
   })
   
-  
+  # Excele Aktar butonu için tepki
+  observeEvent(input$excelBtn, {
+    # Dosyayı bulunduğunuz klasöre kaydet
+    if (!is.null(values$merged_df)) {
+      write.xlsx(values$merged_df, file = "veri_cercevesi.xlsx")
+    }
+  })
 }
 
 # Uygulamayı çalıştır
