@@ -5,14 +5,20 @@ if (!require("shinydashboard")) install.packages("shinydashboard")
 if (!require("plotly")) install.packages("plotly")
 if (!require("DT")) install.packages("DT")
 if (!require("openxlsx")) install.packages("openxlsx")
+if (!require("genefilter")) install.packages("genefilter")
+if (!require("Biobase")) install.packages("Biobase")
+
 
 library(shiny)
 library(GEOquery)
 library(shinydashboard)
 library(plotly)
 library(DT)
+library(hgu133plus2.db)
 library(genefilter)
 library(openxlsx)
+library(Biobase)
+library(impute)
 
 getGSE <- function(gseNumber) {
   gse <- getGEO(gseNumber, GSEMatrix = TRUE, AnnotGPL = TRUE)
@@ -33,20 +39,28 @@ ui <- dashboardPage(
     actionButton("submitBtn", "Verileri Getir"),
     actionButton("mergeBtn", "Birleştir"),
     actionButton("excelBtn", "Excele Aktar"),  # Excele Aktar butonu eklendi
-    actionButton("importExcelBtn", "Excel İçe Aktar")  # Excel İçe Aktar butonu eklendi
+    actionButton("importExcelBtn", "Excel İçe Aktar"),  # Excel İçe Aktar butonu eklendi
+    selectInput("filterMethod", "Filtreleme Yöntemi:", choices = c("nsFilter", "varFilter")),
+    # Yeni eklenen Filtrele butonu
+    actionButton("filterBtn", "Filtrele")
   ),
   dashboardBody(
     box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse1Table")),
     box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse2Table")),
-    box(title = "Birleştirilmiş Veri", width = 12, solidHeader = TRUE, DTOutput("mergedTable"))
-  )
+    box(title = "Birleştirilmiş Veri", width = 12, solidHeader = TRUE, DTOutput("mergedTable")),
+    box(title = "Filtrelenmiş", width = 12, solidHeader = TRUE, DTOutput("filteredGSE1Table")),  # Yeni eklenen Filtre GSE1 tablosu
+    
+    )
 )
 
 # Server oluştur
 server <- function(input, output, session) {
   
   values <- reactiveValues(
-    merged_df = NULL
+    merged_df = NULL,
+    gse1Data = NULL,
+    gse2Data = NULL,
+    birlestirilmis_data = NULL
   )
   # GSE verilerini alma fonksiyonu
   getGSEData <- reactive({
@@ -96,7 +110,8 @@ server <- function(input, output, session) {
     common_data_gse2 <- gen2[common_gene, ]
     
     # İki veri setini birleştirin
-    birlestirilmis_data <- cbind(common_data_gse1, common_data_gse2)
+    values$birlestirilmis_data <- cbind(common_data_gse1, common_data_gse2)
+    print(class(values$birlestirilmis_data))
     
     selected_column_gse1 <- input$columnSelect1
     selected_column_gse2 <- input$columnSelect2
@@ -139,6 +154,46 @@ server <- function(input, output, session) {
                 options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
     })
   })
+  
+  # Filtrele butonu için tepki
+  observeEvent(input$filterBtn, {
+    selectedFilter <- input$filterMethod
+    eset1 <- ExpressionSet(assayData = values$birlestirilmis_data)
+    annotation(eset1) <- "hgu133plus2.db"
+    if (selectedFilter == "nsFilter") {
+      filtrelenmis1 <- nsFilter(
+        eset1,
+        require.entrez = TRUE,
+        require.GOBP = FALSE,
+        require.GOCC = FALSE,
+        require.GOMF = FALSE,
+        require.CytoBand = FALSE,
+        remove.dupEntrez = TRUE,
+        var.func = IQR,
+        var.cutoff = 0.90,
+        var.filter = TRUE,
+        filterByQuantile = TRUE,
+        feature.exclude = "^AFFX"
+      )
+      sonveri1 <- data.frame(t(exprs(filtrelenmis1$eset)))
+     
+    } else if (selectedFilter == "varFilter") {
+    
+      eset1 <- ExpressionSet(assayData = values$birlestirilmis_data)
+      varFilter(eset1, var.func=IQR, var.cutoff=0.5, filterByQuantile=TRUE)
+      
+      filtrelenmis1<- varFilter(eset1,var.cutoff = 0.90)
+      sonveri1 <- data.frame(filtrelenmis1)
+    
+    }
+    
+    # Filtrelenmiş GSE verilerini ekranda göster
+    output$filteredGSE1Table <- renderDT({
+      datatable(sonveri1, options = list(scrollX = TRUE, scrollY = TRUE))
+    })
+ 
+  })
+  
 }
 
 # Uygulamayı çalıştır
