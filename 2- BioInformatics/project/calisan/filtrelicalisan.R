@@ -7,7 +7,7 @@ if (!require("DT")) install.packages("DT")
 if (!require("openxlsx")) install.packages("openxlsx")
 if (!require("genefilter")) install.packages("genefilter")
 if (!require("Biobase")) install.packages("Biobase")
-
+if (!require("caret")) install.packages("caret")
 
 library(shiny)
 library(GEOquery)
@@ -18,7 +18,7 @@ library(hgu133plus2.db)
 library(genefilter)
 library(openxlsx)
 library(Biobase)
-library(impute)
+library(caret)
 
 getGSE <- function(gseNumber) {
   gse <- getGEO(gseNumber, GSEMatrix = TRUE, AnnotGPL = TRUE)
@@ -38,19 +38,25 @@ ui <- dashboardPage(
     selectInput("columnSelect2", "Sütun Seç 2:", choices = NULL),
     actionButton("submitBtn", "Verileri Getir"),
     actionButton("mergeBtn", "Birleştir"),
-    actionButton("excelBtn", "Excele Aktar"),  # Excele Aktar butonu eklendi
-    actionButton("importExcelBtn", "Excel İçe Aktar"),  # Excel İçe Aktar butonu eklendi
+    actionButton("excelBtn", "Excele Aktar"),
+    actionButton("importExcelBtn", "Excel İçe Aktar"),
     selectInput("filterMethod", "Filtreleme Yöntemi:", choices = c("nsFilter", "varFilter")),
-    # Yeni eklenen Filtrele butonu
-    actionButton("filterBtn", "Filtrele")
+    actionButton("filterBtn", "Filtrele"),
+    # Yeni eklenen açılır menü
+    selectInput("mlAlgorithm", "Makine Öğrenmesi Seçimi:",
+                choices = c("knn", "lda", "rf","lm", "glm", "svmLinear","gbm", "neuralnet","glmnet", "xgbTree", "glmnet", "kmeans")),
+    # Eğit butonu
+    actionButton("trainBtn", "Eğit")
   ),
   dashboardBody(
     box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse1Table")),
     box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse2Table")),
     box(title = "Birleştirilmiş Veri", width = 12, solidHeader = TRUE, DTOutput("mergedTable")),
-    box(title = "Filtrelenmiş", width = 12, solidHeader = TRUE, DTOutput("filteredGSE1Table")),  # Yeni eklenen Filtre GSE1 tablosu
+    box(title = "Filtrelenmiş", width = 12, solidHeader = TRUE, DTOutput("filteredGSE1Table")),
+    box(title = "Sonuç", width = 12, solidHeader = TRUE, DTOutput("featureImportanceTable"))
+     
     
-    )
+  )
 )
 
 # Server oluştur
@@ -60,8 +66,11 @@ server <- function(input, output, session) {
     merged_df = NULL,
     gse1Data = NULL,
     gse2Data = NULL,
-    birlestirilmis_data = NULL
+    birlestirilmis_data = NULL,
+    sonveri = NULL,
+    birlestirilmis_durum =NULL
   )
+  
   # GSE verilerini alma fonksiyonu
   getGSEData <- reactive({
     gse1Data <- getGSE(input$gse1)
@@ -132,7 +141,6 @@ server <- function(input, output, session) {
       datatable(head(values$merged_df), 
                 options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
     })
-    
   })
   
   # Excele Aktar butonu için tepki
@@ -146,11 +154,37 @@ server <- function(input, output, session) {
   # Excel İçe Aktar butonu için tepki
   observeEvent(input$importExcelBtn, {
     # Önceki Excele Aktar işlemi sonucu oluşan dosyayı oku
-    birlestirilmis_durum <- read.xlsx("veri_cercevesi.xlsx")
+    values$birlestirilmis_durum <- read.xlsx("veri_cercevesi.xlsx")
     
     # Ekrana yazdır
     output$mergedTable <- renderDT({
-      datatable(birlestirilmis_durum, 
+      datatable(values$birlestirilmis_durum, 
+                options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
+    })
+  })
+  
+  # Eğit butonu için tepki
+  observeEvent(input$trainBtn, {
+    selectedAlgorithm <- input$mlAlgorithm
+    
+    if (is.null(values$birlestirilmis_data)) {
+      return(NULL)
+    }
+    
+    # Eğitim veri çerçevesini oluştur
+    data_frame1 <- as.data.frame(values$sonveri)
+    data_frame1$durum <- values$birlestirilmis_durum 
+    data_frame1$durum <- as.factor(data_frame1$durum$durum_gse1)
+    
+    # Modeli eğit
+    model <- train(durum ~ ., data = data_frame1, method = selectedAlgorithm)
+    
+    # Özellik önem sıralamasını al
+    feature_importance <- as.data.frame(varImp(model)$importance)
+    
+    # Sonucu ekrana datatable olarak yazdır
+    output$featureImportanceTable <- renderDT({
+      datatable(feature_importance, 
                 options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
     })
   })
@@ -175,23 +209,21 @@ server <- function(input, output, session) {
         filterByQuantile = TRUE,
         feature.exclude = "^AFFX"
       )
-      sonveri1 <- data.frame(t(exprs(filtrelenmis1$eset)))
-     
+      values$sonveri <- data.frame(t(exprs(filtrelenmis1$eset)))
+      
     } else if (selectedFilter == "varFilter") {
-    
+      
       eset1 <- ExpressionSet(assayData = values$birlestirilmis_data)
       varFilter(eset1, var.func=IQR, var.cutoff=0.5, filterByQuantile=TRUE)
       
       filtrelenmis1<- varFilter(eset1,var.cutoff = 0.90)
-      sonveri1 <- data.frame(filtrelenmis1)
-    
+      values$sonveri <- data.frame(filtrelenmis1)
     }
     
     # Filtrelenmiş GSE verilerini ekranda göster
     output$filteredGSE1Table <- renderDT({
-      datatable(sonveri1, options = list(scrollX = TRUE, scrollY = TRUE))
+      datatable(values$sonveri, options = list(scrollX = TRUE, scrollY = TRUE))
     })
- 
   })
   
 }
