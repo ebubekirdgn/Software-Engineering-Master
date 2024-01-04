@@ -8,6 +8,7 @@ if (!require("openxlsx")) install.packages("openxlsx")
 if (!require("genefilter")) install.packages("genefilter")
 if (!require("Biobase")) install.packages("Biobase")
 if (!require("caret")) install.packages("caret")
+if (!require("hgu133plus2.db")) install.packages("hgu133plus2.db")
 
 library(shiny)
 library(GEOquery)
@@ -42,20 +43,19 @@ ui <- dashboardPage(
     actionButton("importExcelBtn", "Excel İçe Aktar"),
     selectInput("filterMethod", "Filtreleme Yöntemi:", choices = c("nsFilter", "varFilter")),
     actionButton("filterBtn", "Filtrele"),
-    # Yeni eklenen açılır menü
     selectInput("mlAlgorithm", "Makine Öğrenmesi Seçimi:",
-                choices = c("knn", "lda", "rf","lm", "glm", "svmLinear","gbm", "neuralnet","glmnet", "xgbTree", "glmnet", "kmeans")),
-    # Eğit butonu
-    actionButton("trainBtn", "Eğit")
+                choices = c("knn", "lda", "rf", "lm", "glm", "svmLinear", "gbm", "neuralnet", "glmnet", "xgbTree", "glmnet", "kmeans")),
+    actionButton("trainBtn", "Eğit"),
+    # Sonuç butonu
+    actionButton("resultBtn", "Sonuç")
   ),
   dashboardBody(
     box(title = "İlk GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse1Table")),
     box(title = "İkinci GSE Verisi", width = 6, solidHeader = TRUE, tableOutput("gse2Table")),
     box(title = "Birleştirilmiş Veri", width = 12, solidHeader = TRUE, DTOutput("mergedTable")),
     box(title = "Filtrelenmiş", width = 12, solidHeader = TRUE, DTOutput("filteredGSE1Table")),
-    box(title = "Sonuç", width = 12, solidHeader = TRUE, DTOutput("featureImportanceTable"))
-     
-    
+    box(title = "Sonuç", width = 12, solidHeader = TRUE, DTOutput("featureImportanceTable")),
+    box(title = "En Önemli Gen", width = 12, solidHeader = TRUE, verbatimTextOutput("topGenes"))
   )
 )
 
@@ -68,7 +68,8 @@ server <- function(input, output, session) {
     gse2Data = NULL,
     birlestirilmis_data = NULL,
     sonveri = NULL,
-    birlestirilmis_durum =NULL
+    birlestirilmis_durum = NULL,
+    feature_importance = NULL
   )
   
   # GSE verilerini alma fonksiyonu
@@ -180,13 +181,30 @@ server <- function(input, output, session) {
     model <- train(durum ~ ., data = data_frame1, method = selectedAlgorithm)
     
     # Özellik önem sıralamasını al
-    feature_importance <- as.data.frame(varImp(model)$importance)
+    values$feature_importance <- as.data.frame(varImp(model)$importance)
     
     # Sonucu ekrana datatable olarak yazdır
     output$featureImportanceTable <- renderDT({
-      datatable(feature_importance, 
+      datatable(values$feature_importance, 
                 options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
     })
+  })
+  
+  # Sonuç butonu için tepki
+  observeEvent(input$resultBtn, {
+    req(values$feature_importance)
+    
+    # Seçilecek özellik adlarını al ve X harfini sil
+    
+    
+    selected_features <- gsub("^X", "", head(rownames(values$feature_importance)[order(-values$feature_importance$Overall)][1:6]))
+    
+    # Veritabanından ilgili gen bilgilerini al
+    gene_info <- select(hgu133plus2.db, keys = selected_features, columns = c("PROBEID", "SYMBOL", "GENENAME"))
+    
+    # En Önemli Geni yazdır
+    print("En Önemli Genler:")
+    print(gene_info)
   })
   
   # Filtrele butonu için tepki
