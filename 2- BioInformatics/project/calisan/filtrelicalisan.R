@@ -205,6 +205,11 @@ server <- function(input, output, session) {
     # En Önemli Geni yazdır
     print("En Önemli Genler:")
     print(gene_info)
+    
+    output$topGenes <- renderPrint({
+      gene_info
+    })
+    
   })
   
   # Filtrele butonu için tepki
