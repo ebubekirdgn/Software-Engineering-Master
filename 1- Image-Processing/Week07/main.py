@@ -21,6 +21,7 @@ def bit_duzlemi_dilimleme(img, d_index):
     out = np.bitwise_and(img, duzlem)
     return out
 
+
 def rescale(img):
     out = img.astype(np.float64)
     out -= np.min(out)
@@ -28,7 +29,7 @@ def rescale(img):
     return (out*255).astype(np.uint8)
 
 
-def duzlem_birlestir(img, duzlemler): # [7,6,5]
+def duzlem_birlestir(img, duzlemler):  # [7,6,5]
     out = np.zeros_like(img)
     for duzlem in duzlemler:
         out += bit_duzlemi_dilimleme(img, duzlem)
@@ -42,14 +43,16 @@ img = cv2.imread(img_path, 0)
 
 img_n_duzlemleri = []
 
-for index in range(7,-1, -1):
+for index in range(7, -1, -1):
     bit_img = bit_duzlemi_dilimleme(img, index)
     bit_img = rescale(bit_img)
     img_n_duzlemleri.append(bit_img)
 
 hstacked1 = np.hstack((img, img_n_duzlemleri[0], img_n_duzlemleri[1]))
-hstacked2 = np.hstack((img_n_duzlemleri[2], img_n_duzlemleri[3], img_n_duzlemleri[4]))
-hstacked3 = np.hstack((img_n_duzlemleri[5], img_n_duzlemleri[6], img_n_duzlemleri[7]))
+hstacked2 = np.hstack(
+    (img_n_duzlemleri[2], img_n_duzlemleri[3], img_n_duzlemleri[4]))
+hstacked3 = np.hstack(
+    (img_n_duzlemleri[5], img_n_duzlemleri[6], img_n_duzlemleri[7]))
 vstacked = np.vstack((hstacked1, hstacked2, hstacked3))
 
 plt.imshow(vstacked, cmap="gray")

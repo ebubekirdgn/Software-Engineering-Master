@@ -27,7 +27,7 @@ hstacked1 = np.hstack((img1, hist_eq_1))
 hstacked2 = np.hstack((img2, hist_eq_2))
 hstacked3 = np.hstack((img3, hist_eq_3))
 
-vstacked = np.vstack((hstacked1,hstacked2, hstacked3))
+vstacked = np.vstack((hstacked1, hstacked2, hstacked3))
 
 plt.imshow(vstacked, cmap="gray")
 plt.show()

@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
+
 def local_enhancement(img, C, k0, k1, k2, k3, window_size):
     img = img.astype(np.float64)
 
@@ -24,18 +25,18 @@ def local_enhancement(img, C, k0, k1, k2, k3, window_size):
         ust_index = max(0, satir - int(window_size / 2))
         alt_index = min(M, satir + int(window_size / 2) + 1)
         for sutun in range(N):
-            sol_index = max(0, sutun - int(window_size /2))
-            sag_index = min(N, sutun + int(window_size /2) + 1)
+            sol_index = max(0, sutun - int(window_size / 2))
+            sag_index = min(N, sutun + int(window_size / 2) + 1)
 
             window_r = img[ust_index:alt_index, sol_index:sag_index]
 
             m_sxy = np.mean(window_r)
             ss_sxy = np.std(window_r)
 
-            ortalama_kosulu = m_G_alt_sinir <=   m_sxy  <= m_G_ust_sinir
+            ortalama_kosulu = m_G_alt_sinir <= m_sxy <= m_G_ust_sinir
             ss_kosulu = ss_G_alt_sinir <= ss_sxy <= ss_G_ust_sinir
-            
-            if(ortalama_kosulu and ss_kosulu):
+
+            if (ortalama_kosulu and ss_kosulu):
                 carpilacak_satirlar.extend(list(range(ust_index, alt_index)))
                 carpilacak_sutunlar.extend(list(range(sol_index, sag_index)))
 
@@ -54,7 +55,7 @@ k2 = 0
 k3 = 0.1
 window_size = 3
 
-out_img = local_enhancement(img,C,k0,k1,k2,k3, window_size)
+out_img = local_enhancement(img, C, k0, k1, k2, k3, window_size)
 
 hstacked = np.hstack((img, out_img))
 plt.imshow(hstacked, cmap="gray")

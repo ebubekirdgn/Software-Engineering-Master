@@ -1,13 +1,13 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 def binary_slicing(img, A, B, alt, ust):
     img_out = np.full_like(img, alt)
     pk = np.logical_and(img >= A, img <= B)
     img_out[pk] = ust
     return img_out
-
 
 def linear_slicing(img, A, B, ust):
     img_out = img.copy()
@@ -22,7 +22,6 @@ def linear_slicing_reverse(img, A, B, ust):
     pk = np.logical_or(pk_kucuk, pk_buyuk)
     img_out[pk] = ust
     return img_out 
-
 
 img_path = "./img/aortic_angiogram.tif"
 img=cv2.imread(img_path, 0)
@@ -41,12 +40,8 @@ hstacked2 = np.hstack((ls_img, lsr_img))
 
 vstacked = np.vstack((hstacked1, hstacked2))
 
-
-
 plt.imshow(vstacked, cmap="gray")
 plt.show()
-
-
 
 # a = np.array([1, 2, 3, 4, 5, 6, 7, 8])
 # b = np.full_like(a, 10) 
@@ -67,12 +62,9 @@ plt.show()
 # a[pk]=255
 # print(a)
 
-import random
-
 x = np.uint8([random.randint(0,255), random.randint(0,255), random.randint(0,255), 
               random.randint(0,255), random.randint(0,255), random.randint(0,255), 
               random.randint(0,255), random.randint(0,255), random.randint(0,255)]).reshape(3,3)
-
 
 print(x)
 s=binary_slicing(x,150,250,0,255)

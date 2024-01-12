@@ -1,3 +1,4 @@
+import random
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,6 +12,7 @@ def log_trans(img, c):
     s = img_scale(s)
     return s
 
+
 def img_scale(img):
     img -= np.min(img)
     img /= np.max(img)
@@ -18,7 +20,7 @@ def img_scale(img):
     return img.astype(np.uint8)
 
 
-#uint8 den float64 dönüşümü
+# uint8 den float64 dönüşümü
 # deneme = np.array([1,25,126,250, 255, 254], dtype=np.uint8)
 # deneme =deneme.astype(np.float64)
 # deneme = 2 + deneme
@@ -48,17 +50,11 @@ hstacked = np.hstack((img, img_log))
 plt.imshow(hstacked, cmap="gray")
 plt.show()
 
-
-
-
-
-import random
-
-x = np.uint8([random.randint(0,255), random.randint(0,255), random.randint(0,255), 
-              random.randint(0,255), random.randint(0,255), random.randint(0,255), 
-              random.randint(0,255), random.randint(0,255), random.randint(0,255)]).reshape(3,3)
-
+x = np.uint8([random.randint(0, 255), random.randint(0, 255), random.randint(0, 255),
+              random.randint(0, 255), random.randint(
+                  0, 255), random.randint(0, 255),
+              random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]).reshape(3, 3)
 
 print(x)
-s=log_trans(x,c=1)
+s = log_trans(x, c=1)
 print(s)
